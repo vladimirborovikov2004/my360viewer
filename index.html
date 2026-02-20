@@ -2,136 +2,175 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Панорама Просмотрщик</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
-    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>3D Панорама</title>
     <style>
-        html, body { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            overflow: hidden; 
-            background: #000;
-            touch-action: pan-x pan-y;
+        * { margin: 0; padding: 0; }
+        body { 
+            height: 100vh; 
+            background: black; 
+            overflow: hidden;
+            touch-action: none;
         }
-        #panorama { 
+        canvas { 
+            display: block; 
             width: 100%; 
             height: 100%; 
         }
     </style>
 </head>
 <body>
-    <div id="panorama"></div>
+    <canvas id="canvas"></canvas>
     <script>
-        // Читаем путь к фото
-        const urlParams = new URLSearchParams(window.location.search);
-        const panoramaPath = urlParams.get('panorama') || 'IMG_20181020_183652_00_012.jpg';
+        const canvas = document.getElementById('canvas');
+        const gl = canvas.getContext('webgl');
+        
+        if (!gl) {
+            document.body.innerHTML = 'WebGL не поддерживается';
+            throw new Error('No WebGL');
+        }
 
-        // Создаем viewer
-        const viewer = pannellum.viewer('panorama', {
-            "type": "equirectangular",
-            "panorama": panoramaPath,
-            "autoLoad": true,
+        // Размеры canvas
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Vertex shader
+        const vsSource = `
+            attribute vec2 position;
+            varying vec2 uv;
+            void main() {
+                uv = position * 0.5 + 0.5;
+                gl_Position = vec4(position, 0.0, 1.0);
+            }
+        `;
+        
+        // Fragment shader для equirectangular
+        const fsSource = `
+            precision mediump float;
+            uniform sampler2D panorama;
+            uniform vec2 yawPitch;
+            uniform float fov;
+            varying vec2 uv;
             
-            // Отключаем ВСЕ контролы зума
-            "showControls": false,
-            "showZoomCtrl": false,
-            "mouseZoom": false,
-            "keyboardZoom": false,
+            vec2 equirectangular(vec3 dir) {
+                float u = atan(dir.z, dir.x) / 6.283185 + 0.5;
+                float v = acos(dir.y) / 3.141593;
+                return vec2(u, v);
+            }
             
-            // Начальный вид
-            "default": {
-                "yaw": -30,
-                "pitch": -10
-            },
-            
-            // Базовые ограничения
-            "pitchLimits": [-45, 90],
-            
-            // АНТИЗУМИРОВАНИЕ: 90° вместо 100° (минус 10%)
-            "hfov": 90,
-            "minHfov": 90,
-            "maxHfov": 90
+            void main() {
+                float yaw = yawPitch.x;
+                float pitch = yawPitch.y;
+                
+                vec3 dir = vec3(
+                    cos(pitch) * sin(yaw),
+                    sin(pitch),
+                    cos(pitch) * cos(yaw)
+                );
+                
+                vec2 texCoord = equirectangular(dir);
+                gl_FragColor = texture2D(panorama, texCoord);
+            }
+        `;
+
+        // Компиляция шейдеров
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
+        }
+
+        const program = gl.createProgram();
+        gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        // Геометрия сферы (quad)
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        const positions = new Float32Array([
+            -1,-1, 1,-1, -1,1, 1,1
+        ]);
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+        const positionLocation = gl.getAttribLocation(program, 'position');
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+        // Текстура
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+        // Загрузка изображения
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+            render();
+        };
+        img.src = 'IMG_20181020_183652_00_012.jpg?' + Date.now();
+
+        // Управление
+        let yaw = -30 * Math.PI / 180;
+        let pitch = -10 * Math.PI / 180;
+        let isDown = false;
+
+        canvas.addEventListener('mousedown', () => isDown = true);
+        canvas.addEventListener('mouseup', () => isDown = false);
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            yaw += e.movementX * 0.01;
+            pitch -= e.movementY * 0.01;
+            pitch = Math.max(-45 * Math.PI / 180, Math.min(90 * Math.PI / 180, pitch));
+            render();
         });
 
-        // ЖЕСТКОЕ ограничение вниз через API (выполняется каждые 50мс)
-        setInterval(() => {
-            try {
-                const state = viewer.getState();
-                if (state.pitch < -45) {
-                    viewer.setPitch(-45);
-                }
-            } catch(e) {}
-        }, 50);
-    </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Панорама Просмотрщик</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
-    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
-    <style>
-        html, body { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            overflow: hidden; 
-            background: #000;
-            touch-action: pan-x pan-y;
-        }
-        #panorama { 
-            width: 100%; 
-            height: 100%; 
-        }
-    </style>
-</head>
-<body>
-    <div id="panorama"></div>
-    <script>
-        // Читаем путь к фото
-        const urlParams = new URLSearchParams(window.location.search);
-        const panoramaPath = urlParams.get('panorama') || 'IMG_20181020_183652_00_012.jpg';
-
-        // Создаем viewer
-        const viewer = pannellum.viewer('panorama', {
-            "type": "equirectangular",
-            "panorama": panoramaPath,
-            "autoLoad": true,
-            
-            // Отключаем ВСЕ контролы зума
-            "showControls": false,
-            "showZoomCtrl": false,
-            "mouseZoom": false,
-            "keyboardZoom": false,
-            
-            // Начальный вид
-            "default": {
-                "yaw": -30,
-                "pitch": -10
-            },
-            
-            // Базовые ограничения
-            "pitchLimits": [-45, 90],
-            
-            // АНТИЗУМИРОВАНИЕ: 90° вместо 100° (минус 10%)
-            "hfov": 70,
-            "minHfov": 70,
-            "maxHfov": 70
+        // Touch
+        let lastX, lastY;
+        canvas.addEventListener('touchstart', (e) => {
+            lastX = e.touches[0].clientX;
+            lastY = e.touches[0].clientY;
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            const x = e.touches[0].clientX;
+            const y = e.touches[0].clientY;
+            yaw += (x - lastX) * 0.01;
+            pitch -= (y - lastY) * 0.01;
+            pitch = Math.max(-45 * Math.PI / 180, Math.min(90 * Math.PI / 180, pitch));
+            lastX = x;
+            lastY = y;
+            render();
         });
 
-        // ЖЕСТКОЕ ограничение вниз через API (выполняется каждые 50мс)
-        setInterval(() => {
-            try {
-                const state = viewer.getState();
-                if (state.pitch < -45) {
-                    viewer.setPitch(-45);
-                }
-            } catch(e) {}
-        }, 50);
+        // Uniforms
+        const yawPitchLoc = gl.getUniformLocation(program, 'yawPitch');
+        const fovLoc = gl.getUniformLocation(program, 'fov');
+
+        // Рендер
+        function render() {
+            gl.uniform2f(yawPitchLoc, yaw, pitch);
+            gl.uniform1f(fovLoc, 75 * Math.PI / 180); // 75° FOV
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+
+        // Запрет зума
+        document.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+        document.addEventListener('touchmove', e => {
+            if (e.scale !== 1) e.preventDefault();
+        }, { passive: false });
     </script>
 </body>
 </html>
+м

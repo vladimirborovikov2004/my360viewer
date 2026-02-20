@@ -28,7 +28,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const panoramaPath = urlParams.get('panorama') || 'IMG_20181020_183652_00_012.jpg';
 
-        // Запускаем просмотрщик с твоими настройками
+        // Запускаем просмотрщик с ПРАВИЛЬНЫМИ ограничениями
         const viewer = pannellum.viewer('panorama', {
             "type": "equirectangular",
             "panorama": panoramaPath,
@@ -40,13 +40,13 @@
             "mouseZoom": false,
             "keyboardZoom": false,
             
-            // Начальный вид: -30° yaw (левее), -10° pitch (ниже)
+            // Начальный вид: 30° левее, 10° ниже
             "default": {
                 "yaw": -30,
                 "pitch": -10
             },
             
-            // Ограничиваем поворот: вниз не ниже -45° (штатив скрыт)
+            // КРИТИЧНО: Ограничения pitch (вертикаль) - от -45° (не ниже) до +90°
             "pitchLimits": [-45, 90],
             
             // Фиксированный угол обзора (зум невозможен)

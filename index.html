@@ -13,7 +13,7 @@
             height: 100%; 
             overflow: hidden; 
             background: #000;
-            touch-action: pan-x pan-y;
+            touch-action: none;
         }
         #panorama { 
             width: 100%; 
@@ -24,38 +24,37 @@
 <body>
     <div id="panorama"></div>
     <script>
-        // Читаем путь к фото
         const urlParams = new URLSearchParams(window.location.search);
         const panoramaPath = urlParams.get('panorama') || 'IMG_20181020_183652_00_012.jpg';
 
-        // Создаем viewer
         const viewer = pannellum.viewer('panorama', {
             "type": "equirectangular",
             "panorama": panoramaPath,
             "autoLoad": true,
-            
-            // Отключаем ВСЕ контролы зума
             "showControls": false,
             "showZoomCtrl": false,
             "mouseZoom": false,
             "keyboardZoom": false,
-            
-            // Начальный вид
             "default": {
                 "yaw": -30,
-                "pitch": -10
+                "pitch": -10,
+                "hfov": 75
             },
-            
-            // Базовые ограничения
-            "pitchLimits": [-45, 90],
-            
-            // АНТИЗУМИРОВАНИЕ: 90° вместо 100° (минус 10%)
-            "hfov": 90,
-            "minHfov": 90,
-            "maxHfov": 90
+            "hfov": 75,
+            "minHfov": 75,
+            "maxHfov": 75,
+            "pitchLimits": [-45, 90]
         });
 
-        // ЖЕСТКОЕ ограничение вниз через API (выполняется каждые 50мс)
+        // ТРОЙНАЯ ЗАЩИТА ОТ СМОТРЕНИЯ ВНИЗ
+        viewer.on('change', function() {
+            const state = viewer.getState();
+            if (state.pitch < -45) {
+                viewer.setPitch(-45);
+            }
+        });
+
+        // Каждые 16мс (60 FPS)
         setInterval(() => {
             try {
                 const state = viewer.getState();
@@ -63,7 +62,16 @@
                     viewer.setPitch(-45);
                 }
             } catch(e) {}
-        }, 50);
+        }, 16);
+
+        // Блокировка touch-событий вниз
+        document.addEventListener('touchmove', function(e) {
+            const state = viewer.getState();
+            if (state.pitch < -45) {
+                e.preventDefault();
+                viewer.setPitch(-45);
+            }
+        }, { passive: false });
     </script>
 </body>
 </html>

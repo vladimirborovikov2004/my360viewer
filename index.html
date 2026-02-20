@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3D Панорама Просмотрщик</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
     <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
@@ -13,6 +13,7 @@
             height: 100%; 
             overflow: hidden; 
             background: #000;
+            touch-action: pan-x pan-y;
         }
         #panorama { 
             width: 100%; 
@@ -23,19 +24,37 @@
 <body>
     <div id="panorama"></div>
     <script>
-        // Читаем путь к фото из URL-параметра ?panorama= или используем твое фото по умолчанию
+        // Читаем путь к фото из URL-параметра ?panorama= или используем твое фото
         const urlParams = new URLSearchParams(window.location.search);
         const panoramaPath = urlParams.get('panorama') || 'IMG_20181020_183652_00_012.jpg';
 
-        // Запускаем просмотрщик панорамы
-        pannellum.viewer('panorama', {
+        // Запускаем просмотрщик с твоими настройками
+        const viewer = pannellum.viewer('panorama', {
             "type": "equirectangular",
             "panorama": panoramaPath,
             "autoLoad": true,
-            "showControls": false,  // Убираем все кнопки
-            "showZoomCtrl": false,  // Без зума
-            "mouseZoom": true       // Зум колесиком мыши
+            
+            // Полностью отключаем зум
+            "showControls": false,
+            "showZoomCtrl": false,
+            "mouseZoom": false,
+            "keyboardZoom": false,
+            
+            // Начальный вид: -30° yaw (левее), -10° pitch (ниже)
+            "default": {
+                "yaw": -30,
+                "pitch": -10
+            },
+            
+            // Ограничиваем поворот: вниз не ниже -45° (штатив скрыт)
+            "pitchLimits": [-45, 90],
+            
+            // Фиксированный угол обзора (зум невозможен)
+            "hfov": 100,
+            "minHfov": 100,
+            "maxHfov": 100
         });
     </script>
 </body>
 </html>
+

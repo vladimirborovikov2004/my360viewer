@@ -2,77 +2,39 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Панорама Просмотрщик</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
-    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Панорама v2</title>
+    <!-- Версия 2.1 - кэш сломан -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css?v=2.1"/>
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js?v=2.1"></script>
     <style>
-        html, body { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            overflow: hidden; 
-            background: #000;
-            touch-action: none;
-        }
-        #panorama { 
-            width: 100%; 
-            height: 100%; 
-        }
+        * { margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; background: #000; }
+        #panorama { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
     <div id="panorama"></div>
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const panoramaPath = urlParams.get('panorama') || 'IMG_20181020_183652_00_012.jpg';
-
+        const panoramaPath = new URLSearchParams(location.search).get('panorama') || 'IMG_20181020_183652_00_012.jpg';
+        
         const viewer = pannellum.viewer('panorama', {
-            "type": "equirectangular",
-            "panorama": panoramaPath,
-            "autoLoad": true,
-            "showControls": false,
-            "showZoomCtrl": false,
-            "mouseZoom": false,
-            "keyboardZoom": false,
-            "default": {
-                "yaw": -30,
-                "pitch": -10,
-                "hfov": 75
-            },
-            "hfov": 75,
-            "minHfov": 75,
-            "maxHfov": 75,
-            "pitchLimits": [-45, 90]
+            type: 'equirectangular',
+            panorama: panoramaPath,
+            autoLoad: true,
+            showControls: false,
+            showZoomCtrl: false,
+            mouseZoom: false,
+            default: { yaw: -30, pitch: -10, hfov: 75 },
+            hfov: 75, minHfov: 75, maxHfov: 75,
+            pitchLimits: [-45, 90]
         });
-
-        // ТРОЙНАЯ ЗАЩИТА ОТ СМОТРЕНИЯ ВНИЗ
-        viewer.on('change', function() {
-            const state = viewer.getState();
-            if (state.pitch < -45) {
-                viewer.setPitch(-45);
-            }
-        });
-
-        // Каждые 16мс (60 FPS)
+        
+        // Жесткое ограничение каждые 10мс
         setInterval(() => {
-            try {
-                const state = viewer.getState();
-                if (state.pitch < -45) {
-                    viewer.setPitch(-45);
-                }
-            } catch(e) {}
-        }, 16);
-
-        // Блокировка touch-событий вниз
-        document.addEventListener('touchmove', function(e) {
             const state = viewer.getState();
-            if (state.pitch < -45) {
-                e.preventDefault();
-                viewer.setPitch(-45);
-            }
-        }, { passive: false });
+            if (state.pitch < -45) viewer.setPitch(-45);
+        }, 10);
     </script>
 </body>
 </html>
-

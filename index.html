@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Панорама Просмотрщик</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+    <style>
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        #panorama { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <div id="panorama"></div>
+    <script>
+        // Получаем URL-параметр panorama или используем дефолт
+        const urlParams = new URLSearchParams(window.location.search);
+        const panoramaPath = urlParams.get('panorama') || 'images/panorama.jpg';
+
+        pannellum.viewer('panorama', {
+            "type": "equirectangular",
+            "panorama": panoramaPath,
+            "autoLoad": true,
+            "showControls": false,  // Без UI-элементов
+            "showZoomCtrl": false
+        });
+    </script>
+</body>
+</html>

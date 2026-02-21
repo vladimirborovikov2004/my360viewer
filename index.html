@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>3D Панорама 60°</title>
+    <title>3D Панорама 40°</title>
     <link rel="stylesheet" href="pannellum.css">
     <style>
         * { margin: 0; padding: 0; }
@@ -22,15 +22,15 @@
             showZoomCtrl: false,
             mouseZoom: false,
             
-            // 60° АНТИЗУМ (ЕЩЁ ДАЛЬШЕ)
+            // 40° АНТИЗУМ (МАКСИМАЛЬНО ДАЛЬШЕ)
             default: { 
                 yaw: -30, 
                 pitch: -10, 
-                hfov: 60 
+                hfov: 40 
             },
-            hfov: 60,      // ← ИЗМЕНИЛИ С 75 НА 60
-            minHfov: 60,   // ← ИЗМЕНИЛИ С 75 НА 60  
-            maxHfov: 60,   // ← ИЗМЕНИЛИ С 75 НА 60
+            hfov: 40,      // ← 40° МАКСИМАЛЬНО ДАЛЬШЕ
+            minHfov: 40,
+            maxHfov: 40,
             
             minPitch: -75,
             maxPitch: 90

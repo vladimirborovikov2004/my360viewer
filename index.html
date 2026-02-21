@@ -3,113 +3,49 @@
 <head>
     <meta charset="utf-8">
     <title>3D Панорама 40°</title>
+    <link rel="stylesheet" href="pannellum.css">
     <style>
         * { margin: 0; padding: 0; }
-        body { 
-            height: 100vh; 
-            background: black; 
-            overflow: hidden;
-            perspective: 1000px;
-        }
-        #viewer { 
-            width: 100%; 
-            height: 100vh; 
-            position: relative;
-            transform-style: preserve-3d;
-            cursor: grab;
-        }
-        #viewer.dragging { cursor: grabbing; }
-        #sphere { 
-            width: 2000px; 
-            height: 1000px; 
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            margin-left: -1000px;
-            margin-top: -500px;
-            border-radius: 1000px 1000px 0;
-            background-size: 2000px 1000px !important;
-            background-image: url('IMG_20181020_183652_00_012.jpg');
-            /* 40° АНТИЗУМ через CSS scale */
-            transform: scale(0.4);
-            transition: transform 0.1s;
-        }
-        @media (max-width: 768px) {
-            #sphere { background-size: 1500px 750px !important; }
-        }
+        html, body { height: 100vh; overflow: hidden; background: black; }
+        #panorama { width: 100%; height: 100vh; }
     </style>
 </head>
 <body>
-    <div id="viewer">
-        <div id="sphere"></div>
-    </div>
+    <div id="panorama"></div>
+    <script src="pannellum.js"></script>
     <script>
-        const viewer = document.getElementById('viewer');
-        const sphere = document.getElementById('sphere');
-        let yaw = -30, pitch = -10;
-        let isDown = false, lastX, lastY;
-
-        // Мышь
-        viewer.addEventListener('mousedown', (e) => {
-            isDown = true;
-            lastX = e.clientX;
-            lastY = e.clientY;
-            viewer.classList.add('dragging');
-        });
-        viewer.addEventListener('mousemove', (e) => {
-            if (!isDown) return;
-            const deltaX = e.clientX - lastX;
-            const deltaY = e.clientY - lastY;
-            yaw += deltaX * 0.5;
-            pitch -= deltaY * 0.5;
-            pitch = Math.max(-75, Math.min(90, pitch));
-            updateView();
-            lastX = e.clientX;
-            lastY = e.clientY;
-        });
-        viewer.addEventListener('mouseup', () => {
-            isDown = false;
-            viewer.classList.remove('dragging');
+        const viewer = pannellum.viewer('panorama', {
+            type: 'equirectangular',
+            panorama: 'IMG_20181020_183652_00_012.jpg',
+            autoLoad: true,
+            showControls: false,
+            showZoomCtrl: false,
+            mouseZoom: false,
+            default: { yaw: -30, pitch: -10 },
+            minPitch: -75,
+            maxPitch: 90
         });
 
-        // Touch
-        viewer.addEventListener('touchstart', (e) => {
-            isDown = true;
-            lastX = e.touches[0].clientX;
-            lastY = e.touches[0].clientY;
-        }, { passive: false });
-        viewer.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const deltaX = e.touches[0].clientX - lastX;
-            const deltaY = e.touches[0].clientY - lastY;
-            yaw += deltaX * 0.5;
-            pitch -= deltaY * 0.5;
-            pitch = Math.max(-75, Math.min(90, pitch));
-            updateView();
-            lastX = e.touches[0].clientX;
-            lastY = e.touches[0].clientY;
-        }, { passive: false });
-        viewer.addEventListener('touchend', () => isDown = false);
+        // МГНОВЕННЫЙ АНТИЗУМ после загрузки
+        viewer.on('load', function() {
+            viewer.setHfov(40);
+        });
 
-        // Обновление вида
-        function updateView() {
-            const x = Math.cos(pitch * Math.PI / 180) * Math.sin(yaw * Math.PI / 180);
-            const y = Math.sin(pitch * Math.PI / 180);
-            const z = Math.cos(pitch * Math.PI / 180) * Math.cos(yaw * Math.PI / 180);
-            
-            sphere.style.transform = `
-                rotateY(${-yaw}deg) 
-                rotateX(${pitch}deg) 
-                scale(0.4)
-            `;
-        }
+        // КАЖДЫЕ 30мс ПРОВЕРЯЕМ 40°
+        setInterval(function() {
+            const state = viewer.getState();
+            if (Math.abs(state.hfov - 40) > 0.1) {
+                viewer.setHfov(40);
+            }
+        }, 30);
 
-        // Запрет зума
-        document.addEventListener('wheel', e => e.preventDefault(), { passive: false });
-        document.body.style.touchAction = 'none';
-
-        // Начальный вид
-        updateView();
+        // КАЖДЫЕ 30мс ПРОВЕРЯЕМ ограничение вниз
+        setInterval(function() {
+            const state = viewer.getState();
+            if (state.pitch < -75) {
+                viewer.setPitch(-75);
+            }
+        }, 30);
     </script>
 </body>
 </html>

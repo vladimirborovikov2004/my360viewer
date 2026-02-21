@@ -31,14 +31,14 @@
             default: {
                 yaw: -30,
                 pitch: -10,
-                hfov: 75
+                hfov: 40
             },
-            hfov: 75,
-            minHfov: 75,
-            maxHfov: 75,
+            hfov: 40,
+            minHfov: 40,
+            maxHfov: 40,
             
             // ОГРАНИЧЕНИЕ ВНИЗ -75° (больше штатив скрыт)
-            minPitch: -75,
+            minPitch: -85,
             maxPitch: 90,
             compass: false
         };
@@ -53,8 +53,8 @@
         // ЖЁСТКОЕ ограничение вниз каждые 50мс
         setInterval(() => {
             const state = viewer.getState();
-            if (state.pitch < -75) {
-                viewer.setPitch(-75);
+            if (state.pitch < -85) {
+                viewer.setPitch(-85);
             }
         }, 50);
     </script>

@@ -3,42 +3,33 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>3D Панорама</title>
-    <!-- КЭШ-БЮСТЕР: версия 3.0 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css?v=3.0">
-    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js?v=3.0"></script>
+    <title>3D Панорама v4</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css?v=4">
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js?v=4"></script>
     <style>
         * { margin: 0; padding: 0; }
-        html, body { 
-            height: 100vh; 
-            overflow: hidden; 
-            background: black; 
-        }
-        #panorama { 
-            width: 100%; 
-            height: 100vh; 
-        }
+        html, body { height: 100vh; overflow: hidden; background: black; }
+        #panorama { width: 100%; height: 100vh; }
     </style>
 </head>
 <body>
     <div id="panorama"></div>
     <script>
-        // АНТИ-КЭШ: рандомный параметр
-        const cacheBuster = 'v=' + Date.now();
+        // ПРИНУДИТЕЛЬНЫЙ АНТИ-КЭШ
+        const cacheBuster = '?v=' + Date.now();
         const panoramaPath = new URLSearchParams(window.location.search).get('panorama') || 
-            'IMG_20181020_183652_00_012.jpg?' + cacheBuster;
+            'IMG_20181020_183652_00_012.jpg' + cacheBuster;
         
-        pannellum.viewer('panorama', {
+        // ПРИНУДИТЕЛЬНЫЙ 75° FOV
+        const config = {
             type: 'equirectangular',
             panorama: panoramaPath,
             autoLoad: true,
-            
-            // БЕЗ ЗУМА
             showControls: false,
             showZoomCtrl: false,
             mouseZoom: false,
             
-            // 75° АНТИЗУМИРОВАНИЕ
+            // АНТИЗУМ 75° - ТРИ РАЗА ЗАДАН
             default: {
                 yaw: -30,
                 pitch: -10,
@@ -48,11 +39,19 @@
             minHfov: 75,
             maxHfov: 75,
             
-            // ОГРАНИЧЕНИЕ ВНИЗ
-            minPitch: -45,
+            // ОГРАНИЧЕНИЕ ВНИЗ (УЖЕ РАБОТАЕТ)
+            minPitch: -75,
             maxPitch: 90,
             compass: false
-        });
+        };
+        
+        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА FOV
+        const viewer = pannellum.viewer('panorama', config);
+        
+        // ПРЯМО СЕЙЧАС устанавливаем 75°
+        setTimeout(() => {
+            viewer.setHfov(75);
+        }, 100);
     </script>
 </body>
 </html>

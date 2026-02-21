@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>3D Панорама v4</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css?v=4">
-    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js?v=4"></script>
+    <title>3D Панорама v5</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css?v=5">
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js?v=5"></script>
     <style>
         * { margin: 0; padding: 0; }
         html, body { height: 100vh; overflow: hidden; background: black; }
@@ -15,12 +15,10 @@
 <body>
     <div id="panorama"></div>
     <script>
-        // ПРИНУДИТЕЛЬНЫЙ АНТИ-КЭШ
         const cacheBuster = '?v=' + Date.now();
         const panoramaPath = new URLSearchParams(window.location.search).get('panorama') || 
             'IMG_20181020_183652_00_012.jpg' + cacheBuster;
         
-        // ПРИНУДИТЕЛЬНЫЙ 75° FOV
         const config = {
             type: 'equirectangular',
             panorama: panoramaPath,
@@ -29,7 +27,7 @@
             showZoomCtrl: false,
             mouseZoom: false,
             
-            // АНТИЗУМ 75° - ТРИ РАЗА ЗАДАН
+            // 75° АНТИЗУМИРОВАНИЕ (3 уровня защиты)
             default: {
                 yaw: -30,
                 pitch: -10,
@@ -39,19 +37,26 @@
             minHfov: 75,
             maxHfov: 75,
             
-            // ОГРАНИЧЕНИЕ ВНИЗ (УЖЕ РАБОТАЕТ)
+            // ОГРАНИЧЕНИЕ ВНИЗ -75° (больше штатив скрыт)
             minPitch: -75,
             maxPitch: 90,
             compass: false
         };
         
-        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА FOV
         const viewer = pannellum.viewer('panorama', config);
         
-        // ПРЯМО СЕЙЧАС устанавливаем 75°
-        setTimeout(() => {
+        // ЖЁСТКИЙ АНТИЗУМ каждые 100мс
+        setInterval(() => {
             viewer.setHfov(75);
         }, 100);
+        
+        // ЖЁСТКОЕ ограничение вниз каждые 50мс
+        setInterval(() => {
+            const state = viewer.getState();
+            if (state.pitch < -75) {
+                viewer.setPitch(-75);
+            }
+        }, 50);
     </script>
 </body>
 </html>
